@@ -20,5 +20,4 @@ zig build test
 
 ### Implemented
 
-- Linked List (double linked)
-- Binary Tree (in progress)
+- Linked List
