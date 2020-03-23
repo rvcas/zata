@@ -49,6 +49,24 @@ pub fn LinkedList(comptime T: type) type {
             self.head = null;
         }
 
+        pub fn insert(self: *Self, data: T) !void {
+            var newNode = try self.allocator.create(Node);
+            defer self.allocator.destroy(newNode);
+
+            newNode.* = Node.init(data);
+
+            if (self.head) |head| {
+                newNode.next = head;
+                head.prev = newNode;
+            } else {
+                self.tail = newNode;
+            }
+
+            self.head = newNode;
+
+            self.len += 1;
+        }
+
         pub fn append(self: *Self, data: T) !void {
             var newNode = try self.allocator.create(Node);
             defer self.allocator.destroy(newNode);
@@ -64,6 +82,26 @@ pub fn LinkedList(comptime T: type) type {
 
             self.tail = newNode;
             self.len += 1;
+        }
+
+        pub fn delete(self: *Self) ?T {
+            if (self.tail) |tail| {
+                var data = tail.data;
+                var prev = tail.prev;
+
+                self.allocator.destroy(tail);
+                self.len -= 1;
+
+                self.tail = prev;
+
+                if (prev == null) {
+                    self.head = null;
+                }
+
+                return data;
+            } else {
+                return null;
+            }
         }
     };
 }
@@ -95,6 +133,29 @@ test "LinkedList.init method" {
     testing.expectEqual(list.len, 0);
     testing.expect(list.head == null);
     testing.expect(list.tail == null);
+}
+
+test "LinkListed.insert method" {
+    var arena = std.heap.ArenaAllocator.init(std.heap.direct_allocator);
+    defer arena.deinit();
+
+    const allocator = &arena.allocator;
+
+    var list = LinkedList(i32).init(allocator);
+
+    try list.insert(8);
+
+    testing.expectEqual(list.len, 1);
+    testing.expect(list.head != null);
+    testing.expect(list.tail != null);
+    testing.expectEqual(list.tail, list.head);
+
+    try list.insert(3);
+
+    testing.expectEqual(list.len, 2);
+    testing.expect(list.head != list.tail);
+    testing.expectEqual(list.head.?.data, 3);
+    testing.expectEqual(list.tail.?.data, 8);
 }
 
 test "LinkedList.append method" {
@@ -137,4 +198,22 @@ test "LinkedList.deinit method" {
 
     testing.expectEqual(list.len, 0);
     testing.expectEqual(list.head, list.tail);
+}
+
+test "LinkedList.delete method" {
+    var arena = std.heap.ArenaAllocator.init(std.heap.direct_allocator);
+    defer arena.deinit();
+
+    const allocator = &arena.allocator;
+
+    var list = LinkedList(i32).init(allocator);
+
+    try list.append(5);
+    try list.insert(8);
+    try list.append(9);
+
+    testing.expectEqual(list.delete(), 9);
+    testing.expectEqual(list.delete(), 5);
+    testing.expectEqual(list.delete(), 8);
+    testing.expectEqual(list.len, 0);
 }
