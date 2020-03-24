@@ -106,7 +106,7 @@ pub fn LinkedList(comptime T: type) type {
     };
 }
 
-test "LinkedLink basic init" {
+test "LinkedList basic init" {
     var arena = std.heap.ArenaAllocator.init(std.heap.direct_allocator);
     defer arena.deinit();
 
@@ -135,7 +135,7 @@ test "LinkedList.init method" {
     testing.expect(list.tail == null);
 }
 
-test "LinkListed.insert method" {
+test "LinkedList.insert method" {
     var arena = std.heap.ArenaAllocator.init(std.heap.direct_allocator);
     defer arena.deinit();
 
