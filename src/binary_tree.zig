@@ -28,6 +28,10 @@ pub fn BinaryTree(comptime T: type) type {
             self.count += 1;
         }
 
+        pub fn map(self: *Self, func: fn (T) T) void {
+            Node.map(self.root, func);
+        }
+
         pub fn delete(self: *Self, data: T) void {
             self.root = Node.delete(self.root, self, data);
         }
@@ -45,7 +49,7 @@ pub fn BinaryTree(comptime T: type) type {
                 };
             }
 
-            pub fn insert(self: ?*Node, newNode: *Node) ?*Node {
+            fn insert(self: ?*Node, newNode: *Node) ?*Node {
                 if (self) |node| {
                     if (node.data < newNode.data) {
                         node.right = insert(node.right, newNode);
@@ -59,7 +63,15 @@ pub fn BinaryTree(comptime T: type) type {
                 }
             }
 
-            pub fn delete(self: ?*Node, list: *Self, data: T) ?*Node {
+            fn map(self: ?*Node, func: fn (T) T) void {
+                if (self) |node| {
+                    node.data = func(node.data);
+                    map(node.right, func);
+                    map(node.left, func);
+                }
+            }
+
+            fn delete(self: ?*Node, list: *Self, data: T) ?*Node {
                 if (self) |node| {
                     if (node.data == data) {
 
@@ -82,8 +94,8 @@ pub fn BinaryTree(comptime T: type) type {
                             return temp;
                         }
 
-                        // node with two children: Get the inorder successor (smallest
-                        // in the right subtree)
+                        // node with two children: Get the inorder successor
+                        // (smallest in the right subtree)
                         var min = node.right;
 
                         while (min != null and min.?.left != null) {
@@ -150,6 +162,32 @@ test "BinaryTree.insert method" {
     testing.expectEqual(tree.root.?.data, 3);
     testing.expectEqual(tree.root.?.right.?.data, 7);
     testing.expectEqual(tree.root.?.left.?.data, 2);
+}
+
+test "BinaryTree.map method" {
+    var arena = std.heap.ArenaAllocator.init(std.heap.direct_allocator);
+    defer arena.deinit();
+
+    const allocator = &arena.allocator;
+
+    var tree = BinaryTree(i32).init(allocator);
+
+    try tree.insert(3);
+    try tree.insert(7);
+    try tree.insert(2);
+
+    const addOne = struct {
+        fn function(data: i32) i32 {
+            return data + 1;
+        }
+    }.function;
+
+    tree.map(addOne);
+
+    testing.expectEqual(tree.count, 3);
+    testing.expectEqual(tree.root.?.data, 4);
+    testing.expectEqual(tree.root.?.right.?.data, 8);
+    testing.expectEqual(tree.root.?.left.?.data, 3);
 }
 
 test "BinaryTree.delete method" {
