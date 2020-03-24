@@ -21,6 +21,52 @@ pub fn BinaryTree(comptime T: type) type {
                     .data = data,
                 };
             }
+
+            pub fn delete(self: ?*Node, list: *Self, data: T) ?*Node {
+                if (self) |node| {
+                    if (node.data == data) {
+
+                        // node with only one child or no child
+                        if (node.left == null) {
+                            var temp = node.right;
+
+                            list.count -= 1;
+
+                            list.allocator.destroy(self);
+
+                            return temp;
+                        } else if (node.right == null) {
+                            var temp = node.left;
+
+                            list.count -= 1;
+
+                            list.allocator.destroy(self);
+
+                            return temp;
+                        }
+
+                        // node with two children: Get the inorder successor (smallest
+                        // in the right subtree)
+                        var min = node.right;
+
+                        while (min != null and min.?.left != null) {
+                            min = min.?.left;
+                        }
+
+                        node.data = min.?.data;
+
+                        node.right = delete(node.right, list, min.?.data);
+                    } else if (node.data < data) {
+                        node.right = delete(node.right, list, data);
+                    } else {
+                        node.left = delete(node.left, list, data);
+                    }
+
+                    return self;
+                } else {
+                    return null;
+                }
+            }
         };
 
         pub fn init(allocator: *std.mem.Allocator) Self {
@@ -62,6 +108,10 @@ pub fn BinaryTree(comptime T: type) type {
             }
 
             self.count += 1;
+        }
+
+        pub fn delete(self: *Self, data: T) void {
+            self.root = Node.delete(self.root, self, data);
         }
     };
 }
@@ -108,4 +158,27 @@ test "BinaryTree.insert method" {
     testing.expectEqual(tree.root.?.data, 3);
     testing.expectEqual(tree.root.?.right.?.data, 7);
     testing.expectEqual(tree.root.?.left.?.data, 2);
+}
+
+test "BinaryTree.delete method" {
+    var arena = std.heap.ArenaAllocator.init(std.heap.direct_allocator);
+    defer arena.deinit();
+
+    const allocator = &arena.allocator;
+
+    var tree = BinaryTree(i32).init(allocator);
+
+    try tree.insert(4);
+    try tree.insert(7);
+    try tree.insert(1);
+    try tree.insert(3);
+    try tree.insert(6);
+
+    testing.expectEqual(tree.count, 5);
+    testing.expectEqual(tree.root.?.data, 4);
+
+    tree.delete(4);
+
+    testing.expectEqual(tree.count, 4);
+    testing.expectEqual(tree.root.?.data, 6);
 }
