@@ -84,6 +84,16 @@ pub fn LinkedList(comptime T: type) type {
             self.len += 1;
         }
 
+        pub fn map(self: *Self, func: fn (T) T) void {
+            var iter = self.head;
+
+            while (iter) |node| {
+                node.data = func(node.data);
+
+                iter = node.next;
+            }
+        }
+
         pub fn delete(self: *Self) ?T {
             if (self.tail) |tail| {
                 var data = tail.data;
@@ -179,6 +189,30 @@ test "LinkedList.append method" {
     testing.expect(list.head != list.tail);
     testing.expectEqual(list.head.?.data, 4);
     testing.expectEqual(list.tail.?.data, 7);
+}
+
+test "LinkedList.map method" {
+    var arena = std.heap.ArenaAllocator.init(std.heap.direct_allocator);
+    defer arena.deinit();
+
+    const allocator = &arena.allocator;
+
+    var list = LinkedList(i32).init(allocator);
+
+    try list.insert(2);
+    try list.insert(3);
+
+    const multThree = struct {
+        fn function(data: i32) i32 {
+            return data * 3;
+        }
+    }.function;
+
+    list.map(multThree);
+
+    testing.expectEqual(list.len, 2);
+    testing.expectEqual(list.head.?.data, 9);
+    testing.expectEqual(list.tail.?.data, 6);
 }
 
 test "LinkedList.deinit method" {
