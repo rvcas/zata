@@ -36,6 +36,22 @@ pub fn BinaryTree(comptime T: type) type {
             self.root = Node.delete(self.root, self, data);
         }
 
+        pub fn contains(self: *Self, data: T) bool {
+            var iter = self.root;
+
+            while (iter) |node| {
+                if (node.data == data) {
+                    return true;
+                } else if (node.data < data) {
+                    iter = node.right;
+                } else {
+                    iter = node.left;
+                }
+            } else {
+                return false;
+            }
+        }
+
         pub const Node = struct {
             left: ?*Node,
             right: ?*Node,
@@ -188,6 +204,21 @@ test "BinaryTree.map method" {
     testing.expectEqual(tree.root.?.data, 4);
     testing.expectEqual(tree.root.?.right.?.data, 8);
     testing.expectEqual(tree.root.?.left.?.data, 3);
+}
+
+test "BinaryTree.contains method" {
+    var arena = std.heap.ArenaAllocator.init(std.heap.direct_allocator);
+    defer arena.deinit();
+
+    const allocator = &arena.allocator;
+
+    var tree = BinaryTree(i32).init(allocator);
+
+    try tree.insert(3);
+    try tree.insert(7);
+    try tree.insert(2);
+
+    testing.expect(tree.contains(7));
 }
 
 test "BinaryTree.delete method" {
