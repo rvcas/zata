@@ -9,6 +9,29 @@ pub fn BinaryTree(comptime T: type) type {
 
         const Self = @This();
 
+        pub fn init(allocator: *std.mem.Allocator) Self {
+            return Self{
+                .root = null,
+                .count = 0,
+                .allocator = allocator,
+            };
+        }
+
+        pub fn insert(self: *Self, data: T) !void {
+            var newNode = try self.allocator.create(Node);
+            defer self.allocator.destroy(newNode);
+
+            newNode.* = Node.init(data);
+
+            self.root = Node.insert(self.root, newNode);
+
+            self.count += 1;
+        }
+
+        pub fn delete(self: *Self, data: T) void {
+            self.root = Node.delete(self.root, self, data);
+        }
+
         pub const Node = struct {
             left: ?*Node,
             right: ?*Node,
@@ -20,6 +43,20 @@ pub fn BinaryTree(comptime T: type) type {
                     .right = null,
                     .data = data,
                 };
+            }
+
+            pub fn insert(self: ?*Node, newNode: *Node) ?*Node {
+                if (self) |node| {
+                    if (node.data < newNode.data) {
+                        node.right = insert(node.right, newNode);
+                    } else {
+                        node.left = insert(node.left, newNode);
+                    }
+
+                    return self;
+                } else {
+                    return newNode;
+                }
             }
 
             pub fn delete(self: ?*Node, list: *Self, data: T) ?*Node {
@@ -68,51 +105,6 @@ pub fn BinaryTree(comptime T: type) type {
                 }
             }
         };
-
-        pub fn init(allocator: *std.mem.Allocator) Self {
-            return Self{
-                .root = null,
-                .count = 0,
-                .allocator = allocator,
-            };
-        }
-
-        pub fn insert(self: *Self, data: T) !void {
-            var newNode = try self.allocator.create(Node);
-            defer self.allocator.destroy(newNode);
-
-            newNode.* = Node.init(data);
-
-            if (self.root == null) {
-                self.root = newNode;
-            } else {
-                var currentNode = self.root;
-
-                while (currentNode) |node| {
-                    if (node.data < data) {
-                        if (node.right) |right| {
-                            currentNode = right;
-                        } else {
-                            node.right = newNode;
-                            break;
-                        }
-                    } else {
-                        if (node.left) |left| {
-                            currentNode = left;
-                        } else {
-                            node.left = newNode;
-                            break;
-                        }
-                    }
-                }
-            }
-
-            self.count += 1;
-        }
-
-        pub fn delete(self: *Self, data: T) void {
-            self.root = Node.delete(self.root, self, data);
-        }
     };
 }
 
