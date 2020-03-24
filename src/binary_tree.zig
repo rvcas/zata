@@ -219,6 +219,7 @@ test "BinaryTree.contains method" {
     try tree.insert(2);
 
     testing.expect(tree.contains(7));
+    testing.expect(tree.contains(2));
 }
 
 test "BinaryTree.delete method" {
