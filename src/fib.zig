@@ -51,7 +51,7 @@ pub fn fib_dyn(n: u64) u64 {
 
 
 test "dynamic" {
-    assert(fib(21) == 10946);
+    assert(fib(8) == 21);
 }
 
 test "memorization" {
@@ -59,7 +59,7 @@ test "memorization" {
     defer map.deinit();
     _ = map.put(0, 0) catch unreachable;
     _ = map.put(1, 1) catch unreachable;
-    assert(fib_mem(21, &map) == 10946);
+    assert(fib_mem(8, &map) == 21);
 
 }
 
@@ -68,10 +68,10 @@ test "linear memorization" {
     defer map.deinit();
     _ = map.put(0, 0) catch unreachable;
     _ = map.put(1, 1) catch unreachable;
-    assert(fib_lin(21, &map) == 10946);   
+    assert(fib_lin(8, &map) == 21);   
 }
 
 
 test "fib dynamic programming goal" {
-    assert(fib_dyn(21) == 10946);
+    assert(fib_dyn(8) == 21);
 }
