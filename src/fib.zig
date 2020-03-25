@@ -27,19 +27,19 @@ pub fn fib_mem(n: u64, map: *std.AutoHashMap(u64,u64)) u64 {
 pub fn fib_lin(n: u64, map: *std.AutoHashMap(u64, u64)) u64 {
     // limit to 256 max fib number. 
     var i : u8 = 2;
-    while(i <= n): (i += 1) {
+    while (i <= n): (i += 1) {
         _ =  map.put(i, map.getValue(i - 1).? + map.getValue(i - 2).?) catch unreachable;
     }
     return map.getValue(n).?;
 }    
 
 pub fn fib_dyn(n: u64) u64 {
-    var f0: u64  = 0;
     var f1: u64  = 1;
+    var f0: u64  = 0;
     var sum: u64 = 0; 
-    var i: u8 = 0;
+    var i: u8 = 1;
     
-    while(i <= n): (i += 1) {
+    while (i <= n): (i += 1) {
         sum = f0 + f1;
         f1 = f0;
         f0 = sum;
