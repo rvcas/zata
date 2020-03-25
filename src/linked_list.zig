@@ -94,6 +94,20 @@ pub fn LinkedList(comptime T: type) type {
             }
         }
 
+        pub fn contains(self: *Self, data: T) bool {
+            var iter = self.head;
+
+            while (iter) |node| {
+                if (node.data == data) {
+                    return true;
+                }
+
+                iter = node.next;
+            } else {
+                return false;
+            }
+        }
+
         pub fn delete(self: *Self) ?T {
             if (self.tail) |tail| {
                 var data = tail.data;
@@ -213,6 +227,20 @@ test "LinkedList.map method" {
     testing.expectEqual(list.len, 2);
     testing.expectEqual(list.head.?.data, 9);
     testing.expectEqual(list.tail.?.data, 6);
+}
+
+test "LinkedList.contains method" {
+    var arena = std.heap.ArenaAllocator.init(std.heap.direct_allocator);
+    defer arena.deinit();
+
+    const allocator = &arena.allocator;
+
+    var list = LinkedList(i32).init(allocator);
+
+    try list.insert(11);
+
+    testing.expect(list.contains(11));
+    testing.expect(!list.contains(7));
 }
 
 test "LinkedList.deinit method" {
