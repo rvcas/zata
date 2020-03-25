@@ -13,7 +13,7 @@ pub fn fib(n: u64) u64 {
 }
 
 
-pub fn mem_fib(n: u64, map: *std.AutoHashMap(u64,u64)) u64 {
+pub fn fib_mem(n: u64, map: *std.AutoHashMap(u64,u64)) u64 {
     if (map.contains(n)) {
         return map.getValue(n) orelse 0;
     }
