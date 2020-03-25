@@ -24,7 +24,6 @@ pub fn fib_mem(n: u64, map: *std.AutoHashMap(u64,u64)) u64 {
     return x;
 }
 
-test "fib(21)" {
 pub fn fib_lin(n: u64, map: *std.AutoHashMap(u64, u64)) u64 {
     // limit to 256 max fib number. 
     var i : u8 = 2;
