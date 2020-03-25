@@ -1,7 +1,7 @@
 const std = @import("std");
 const assert = std.debug.assert;
 
-pub fn fib(n: i32) i32 {
+pub fn fib(n: u64) u64 {
     if (n == 0) {
         return 0;
     }
