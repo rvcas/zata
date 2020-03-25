@@ -26,10 +26,13 @@ pub fn fib_mem(n: u64, map: *std.AutoHashMap(u64,u64)) u64 {
 
 test "fib(21)" {
     assert(fib(21) == 10946);
+test "memorization" {
     var map = std.AutoHashMap(u64, u64).init(std.testing.allocator);
+    defer map.deinit();
     _ = map.put(0, 0) catch unreachable;
     _ = map.put(1, 1) catch unreachable;
-    
-    assert(mem_fib(21, &map) == 10946);
-    map.deinit();
+    assert(fib_mem(21, &map) == 10946);
+
+}
+
 }
