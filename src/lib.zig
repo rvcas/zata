@@ -1,2 +1,2 @@
-pub const LinkedList = @import("linked_list.zig").LinkedList;
-pub const BinaryTree = @import("binary_tree.zig").BinaryTree;
+pub usingnamespace @import("linked_list.zig");
+pub usingnamespace @import("binary_tree.zig");
