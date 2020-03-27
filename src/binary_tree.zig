@@ -19,7 +19,7 @@ pub fn BinaryTree(comptime T: type) type {
 
         pub fn insert(self: *Self, data: T) !void {
             var newNode = try self.allocator.create(Node);
-            defer self.allocator.destroy(newNode);
+            errdefer self.allocator.destroy(newNode);
 
             newNode.* = Node.init(data);
 
@@ -67,7 +67,7 @@ pub fn BinaryTree(comptime T: type) type {
 
             fn insert(self: ?*Node, newNode: *Node) ?*Node {
                 if (self) |node| {
-                    if (node.data < newNode.data) {
+                    if (newNode.data >= node.data) {
                         node.right = insert(node.right, newNode);
                     } else {
                         node.left = insert(node.left, newNode);
@@ -82,8 +82,8 @@ pub fn BinaryTree(comptime T: type) type {
             fn map(self: ?*Node, func: fn (T) T) void {
                 if (self) |node| {
                     node.data = func(node.data);
-                    map(node.right, func);
                     map(node.left, func);
+                    map(node.right, func);
                 }
             }
 

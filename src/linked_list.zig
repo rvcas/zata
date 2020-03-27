@@ -51,7 +51,7 @@ pub fn LinkedList(comptime T: type) type {
 
         pub fn insert(self: *Self, data: T) !void {
             var newNode = try self.allocator.create(Node);
-            defer self.allocator.destroy(newNode);
+            errdefer self.allocator.destroy(newNode);
 
             newNode.* = Node.init(data);
 
@@ -69,7 +69,7 @@ pub fn LinkedList(comptime T: type) type {
 
         pub fn append(self: *Self, data: T) !void {
             var newNode = try self.allocator.create(Node);
-            defer self.allocator.destroy(newNode);
+            errdefer self.allocator.destroy(newNode);
 
             newNode.* = Node.init(data);
 
