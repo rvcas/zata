@@ -131,28 +131,18 @@ pub fn LinkedList(comptime T: type) type {
 }
 
 test "LinkedList basic init" {
-    var arena = std.heap.ArenaAllocator.init(std.heap.direct_allocator);
-    defer arena.deinit();
-
-    const allocator = &arena.allocator;
-
     const list = LinkedList(i32){
         .head = null,
         .tail = null,
         .len = 0,
-        .allocator = allocator,
+        .allocator = testing.allocator,
     };
 
     testing.expect(list.len == 0);
 }
 
 test "LinkedList.init method" {
-    var arena = std.heap.ArenaAllocator.init(std.heap.direct_allocator);
-    defer arena.deinit();
-
-    const allocator = &arena.allocator;
-
-    const list = LinkedList(i32).init(allocator);
+    const list = LinkedList(i32).init(testing.allocator);
 
     testing.expectEqual(list.len, 0);
     testing.expect(list.head == null);
@@ -160,12 +150,8 @@ test "LinkedList.init method" {
 }
 
 test "LinkedList.insert method" {
-    var arena = std.heap.ArenaAllocator.init(std.heap.direct_allocator);
-    defer arena.deinit();
-
-    const allocator = &arena.allocator;
-
-    var list = LinkedList(i32).init(allocator);
+    var list = LinkedList(i32).init(testing.allocator);
+    defer list.deinit();
 
     try list.insert(8);
 
@@ -183,12 +169,8 @@ test "LinkedList.insert method" {
 }
 
 test "LinkedList.append method" {
-    var arena = std.heap.ArenaAllocator.init(std.heap.direct_allocator);
-    defer arena.deinit();
-
-    const allocator = &arena.allocator;
-
-    var list = LinkedList(i32).init(allocator);
+    var list = LinkedList(i32).init(testing.allocator);
+    defer list.deinit();
 
     try list.append(4);
 
@@ -206,12 +188,8 @@ test "LinkedList.append method" {
 }
 
 test "LinkedList.map method" {
-    var arena = std.heap.ArenaAllocator.init(std.heap.direct_allocator);
-    defer arena.deinit();
-
-    const allocator = &arena.allocator;
-
-    var list = LinkedList(i32).init(allocator);
+    var list = LinkedList(i32).init(testing.allocator);
+    defer list.deinit();
 
     try list.insert(2);
     try list.insert(3);
@@ -230,12 +208,8 @@ test "LinkedList.map method" {
 }
 
 test "LinkedList.contains method" {
-    var arena = std.heap.ArenaAllocator.init(std.heap.direct_allocator);
-    defer arena.deinit();
-
-    const allocator = &arena.allocator;
-
-    var list = LinkedList(i32).init(allocator);
+    var list = LinkedList(i32).init(testing.allocator);
+    defer list.deinit();
 
     try list.insert(11);
 
@@ -244,12 +218,8 @@ test "LinkedList.contains method" {
 }
 
 test "LinkedList.deinit method" {
-    var arena = std.heap.ArenaAllocator.init(std.heap.direct_allocator);
-    defer arena.deinit();
-
-    const allocator = &arena.allocator;
-
-    var list = LinkedList(i32).init(allocator);
+    var list = LinkedList(i32).init(testing.allocator);
+    defer list.deinit();
 
     try list.append(4);
     try list.append(100);
@@ -263,12 +233,8 @@ test "LinkedList.deinit method" {
 }
 
 test "LinkedList.delete method" {
-    var arena = std.heap.ArenaAllocator.init(std.heap.direct_allocator);
-    defer arena.deinit();
-
-    const allocator = &arena.allocator;
-
-    var list = LinkedList(i32).init(allocator);
+    var list = LinkedList(i32).init(testing.allocator);
+    defer list.deinit();
 
     try list.append(5);
     try list.insert(8);

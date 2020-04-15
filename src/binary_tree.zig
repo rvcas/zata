@@ -17,15 +17,13 @@ pub fn BinaryTree(comptime T: type) type {
             };
         }
 
+        pub fn deinit(self: *Self) void {
+            Node.deinit(self.root, self);
+            self.root = null;
+        }
+
         pub fn insert(self: *Self, data: T) !void {
-            var newNode = try self.allocator.create(Node);
-            errdefer self.allocator.destroy(newNode);
-
-            newNode.* = Node.init(data);
-
-            self.root = Node.insert(self.root, newNode);
-
-            self.count += 1;
+            self.root = Node.insert(self.root, self, data);
         }
 
         pub fn map(self: *Self, func: fn (T) T) void {
@@ -52,7 +50,7 @@ pub fn BinaryTree(comptime T: type) type {
             }
         }
 
-        pub const Node = struct {
+        const Node = struct {
             left: ?*Node,
             right: ?*Node,
             data: T,
@@ -65,16 +63,33 @@ pub fn BinaryTree(comptime T: type) type {
                 };
             }
 
-            fn insert(self: ?*Node, newNode: *Node) ?*Node {
+            pub fn deinit(self: ?*Node, tree: *Self) void {
                 if (self) |node| {
-                    if (newNode.data >= node.data) {
-                        node.right = insert(node.right, newNode);
-                    } else {
-                        node.left = insert(node.left, newNode);
+                    deinit(node.left, tree);
+                    deinit(node.right, tree);
+
+                    tree.allocator.destroy(self);
+                    tree.count -= 1;
+                }
+            }
+
+            fn insert(self: ?*Node, tree: *Self, data: T) ?*Node {
+                if (self) |node| {
+                    if (data > node.data) {
+                        node.right = insert(node.right, tree, data);
+                    } else if (data < node.data) {
+                        node.left = insert(node.left, tree, data);
                     }
 
                     return self;
                 } else {
+                    var newNode = try tree.allocator.create(Node);
+                    errdefer tree.allocator.destroy(newNode);
+
+                    newNode.* = Node.init(data);
+
+                    tree.count += 1;
+
                     return newNode;
                 }
             }
@@ -87,7 +102,7 @@ pub fn BinaryTree(comptime T: type) type {
                 }
             }
 
-            fn delete(self: ?*Node, list: *Self, data: T) ?*Node {
+            fn delete(self: ?*Node, tree: *Self, data: T) ?*Node {
                 if (self) |node| {
                     if (node.data == data) {
 
@@ -95,17 +110,17 @@ pub fn BinaryTree(comptime T: type) type {
                         if (node.left == null) {
                             var temp = node.right;
 
-                            list.count -= 1;
+                            tree.count -= 1;
 
-                            list.allocator.destroy(self);
+                            tree.allocator.destroy(self);
 
                             return temp;
                         } else if (node.right == null) {
                             var temp = node.left;
 
-                            list.count -= 1;
+                            tree.count -= 1;
 
-                            list.allocator.destroy(self);
+                            tree.allocator.destroy(self);
 
                             return temp;
                         }
@@ -120,11 +135,11 @@ pub fn BinaryTree(comptime T: type) type {
 
                         node.data = min.?.data;
 
-                        node.right = delete(node.right, list, min.?.data);
+                        node.right = delete(node.right, tree, min.?.data);
                     } else if (node.data < data) {
-                        node.right = delete(node.right, list, data);
+                        node.right = delete(node.right, tree, data);
                     } else {
-                        node.left = delete(node.left, list, data);
+                        node.left = delete(node.left, tree, data);
                     }
 
                     return self;
@@ -137,38 +152,24 @@ pub fn BinaryTree(comptime T: type) type {
 }
 
 test "BinaryTree basic init" {
-    var arena = std.heap.ArenaAllocator.init(std.heap.direct_allocator);
-    defer arena.deinit();
-
-    const allocator = &arena.allocator;
-
     const tree = BinaryTree(i32){
         .root = null,
         .count = 0,
-        .allocator = allocator,
+        .allocator = testing.allocator,
     };
 
     testing.expectEqual(tree.count, 0);
 }
 
 test "BinaryTree.init method" {
-    var arena = std.heap.ArenaAllocator.init(std.heap.direct_allocator);
-    defer arena.deinit();
-
-    const allocator = &arena.allocator;
-
-    var tree = BinaryTree(i32).init(allocator);
+    const tree = BinaryTree(i32).init(testing.allocator);
 
     testing.expectEqual(tree.count, 0);
 }
 
 test "BinaryTree.insert method" {
-    var arena = std.heap.ArenaAllocator.init(std.heap.direct_allocator);
-    defer arena.deinit();
-
-    const allocator = &arena.allocator;
-
-    var tree = BinaryTree(i32).init(allocator);
+    var tree = BinaryTree(i32).init(testing.allocator);
+    defer tree.deinit();
 
     try tree.insert(3);
     try tree.insert(7);
@@ -181,12 +182,8 @@ test "BinaryTree.insert method" {
 }
 
 test "BinaryTree.map method" {
-    var arena = std.heap.ArenaAllocator.init(std.heap.direct_allocator);
-    defer arena.deinit();
-
-    const allocator = &arena.allocator;
-
-    var tree = BinaryTree(i32).init(allocator);
+    var tree = BinaryTree(i32).init(testing.allocator);
+    defer tree.deinit();
 
     try tree.insert(3);
     try tree.insert(7);
@@ -207,12 +204,8 @@ test "BinaryTree.map method" {
 }
 
 test "BinaryTree.contains method" {
-    var arena = std.heap.ArenaAllocator.init(std.heap.direct_allocator);
-    defer arena.deinit();
-
-    const allocator = &arena.allocator;
-
-    var tree = BinaryTree(i32).init(allocator);
+    var tree = BinaryTree(i32).init(testing.allocator);
+    defer tree.deinit();
 
     try tree.insert(3);
     try tree.insert(7);
@@ -224,12 +217,8 @@ test "BinaryTree.contains method" {
 }
 
 test "BinaryTree.delete method" {
-    var arena = std.heap.ArenaAllocator.init(std.heap.direct_allocator);
-    defer arena.deinit();
-
-    const allocator = &arena.allocator;
-
-    var tree = BinaryTree(i32).init(allocator);
+    var tree = BinaryTree(i32).init(testing.allocator);
+    defer tree.deinit();
 
     try tree.insert(4);
     try tree.insert(7);
