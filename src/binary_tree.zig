@@ -3,168 +3,119 @@ const testing = std.testing;
 
 pub fn BinaryTree(comptime T: type) type {
     return struct {
-        root: ?*Node,
+        root: usize = 1,
+        items: []?Node,
         count: usize = 0,
+        capacity: usize = 0,
         allocator: *std.mem.Allocator,
 
         const Self = @This();
 
+        const Node = struct {
+            left: usize,
+            right: usize,
+            location: usize,
+            data: T,
+
+            pub fn init(data: T, location: usize) Node {
+                return Node{
+                    .left = 2 * location,
+                    .right = (2 * location) + 1,
+                    .location = location,
+                    .data = data,
+                };
+            }
+        };
+
         pub fn init(allocator: *std.mem.Allocator) Self {
             return Self{
-                .root = null,
-                .count = 0,
+                .items = &[_]?Node{},
                 .allocator = allocator,
             };
         }
 
         pub fn deinit(self: *Self) void {
-            Node.deinit(self.root, self);
-            self.root = null;
+            self.allocator.free(self.items.ptr[0..self.capacity]);
         }
 
         pub fn insert(self: *Self, data: T) !void {
-            self.root = Node.insert(self.root, self, data);
+            var iter: usize = 1;
+            while (true) {
+                try self.ensureCapacity(iter);
+
+                if (self.items[iter]) |node| {
+                    if (data == node.data) {
+                        break;
+                    } else if (data > node.data) {
+                        iter = node.right;
+                    } else {
+                        iter = node.left;
+                    }
+                } else {
+                    self.items[iter] = Node.init(data, iter);
+                    self.count += 1;
+
+                    break;
+                }
+            }
         }
 
         pub fn map(self: *Self, func: fn (T) T) void {
-            Node.map(self.root, func);
+            for (self.items) |*item| {
+                if (item.*) |node| {
+                    item.*.?.data = func(node.data);
+                }
+            }
         }
 
-        pub fn delete(self: *Self, data: T) void {
-            self.root = Node.delete(self.root, self, data);
-        }
+        // pub fn delete(self: *Self, data: T) void {
+        //     self.root = Node.delete(self.root, self, data);
+        // }
 
         pub fn contains(self: *Self, data: T) bool {
-            var iter = self.root;
-
-            while (iter) |node| {
-                if (node.data == data) {
-                    return true;
-                } else if (node.data < data) {
-                    iter = node.right;
-                } else {
-                    iter = node.left;
+            var iter: usize = 1;
+            while (true) {
+                if (iter > self.capacity) {
+                    return false;
                 }
-            } else {
-                return false;
+
+                if (self.items[iter]) |node| {
+                    if (data == node.data) {
+                        return true;
+                    } else if (data > node.data) {
+                        iter = node.right;
+                    } else {
+                        iter = node.left;
+                    }
+                } else {
+                    return false;
+                }
             }
         }
 
-        const Node = struct {
-            left: ?*Node,
-            right: ?*Node,
-            data: T,
+        fn ensureCapacity(self: *Self, new_capacity: usize) !void {
+            var better_capacity = self.capacity;
+            if (better_capacity >= new_capacity) return;
 
-            pub fn init(data: T) Node {
-                return Node{
-                    .left = null,
-                    .right = null,
-                    .data = data,
-                };
+            while (true) {
+                better_capacity += better_capacity / 2 + 8;
+                if (better_capacity >= new_capacity) break;
             }
 
-            pub fn deinit(self: ?*Node, tree: *Self) void {
-                if (self) |node| {
-                    deinit(node.left, tree);
-                    deinit(node.right, tree);
-
-                    tree.allocator.destroy(self);
-                    tree.count -= 1;
-                }
-            }
-
-            fn insert(self: ?*Node, tree: *Self, data: T) ?*Node {
-                if (self) |node| {
-                    if (data > node.data) {
-                        node.right = insert(node.right, tree, data);
-                    } else if (data < node.data) {
-                        node.left = insert(node.left, tree, data);
-                    }
-
-                    return self;
-                } else {
-                    var newNode = try tree.allocator.create(Node);
-                    errdefer tree.allocator.destroy(newNode);
-
-                    newNode.* = Node.init(data);
-
-                    tree.count += 1;
-
-                    return newNode;
-                }
-            }
-
-            fn map(self: ?*Node, func: fn (T) T) void {
-                if (self) |node| {
-                    node.data = func(node.data);
-                    map(node.left, func);
-                    map(node.right, func);
-                }
-            }
-
-            fn delete(self: ?*Node, tree: *Self, data: T) ?*Node {
-                if (self) |node| {
-                    if (node.data == data) {
-
-                        // node with only one child or no child
-                        if (node.left == null) {
-                            var temp = node.right;
-
-                            tree.count -= 1;
-
-                            tree.allocator.destroy(self);
-
-                            return temp;
-                        } else if (node.right == null) {
-                            var temp = node.left;
-
-                            tree.count -= 1;
-
-                            tree.allocator.destroy(self);
-
-                            return temp;
-                        }
-
-                        // node with two children: Get the inorder successor
-                        // (smallest in the right subtree)
-                        var min = node.right;
-
-                        while (min != null and min.?.left != null) {
-                            min = min.?.left;
-                        }
-
-                        node.data = min.?.data;
-
-                        node.right = delete(node.right, tree, min.?.data);
-                    } else if (node.data < data) {
-                        node.right = delete(node.right, tree, data);
-                    } else {
-                        node.left = delete(node.left, tree, data);
-                    }
-
-                    return self;
-                } else {
-                    return null;
-                }
-            }
-        };
+            const new_memory = try self.allocator.realloc(self.items.ptr[0..self.capacity], better_capacity);
+            self.items.ptr = new_memory.ptr;
+            self.capacity = new_memory.len;
+            self.items.len = self.capacity;
+        }
     };
-}
-
-test "BinaryTree basic init" {
-    const tree = BinaryTree(i32){
-        .root = null,
-        .count = 0,
-        .allocator = testing.allocator,
-    };
-
-    testing.expectEqual(tree.count, 0);
 }
 
 test "BinaryTree.init method" {
-    const tree = BinaryTree(i32).init(testing.allocator);
+    var tree = BinaryTree(i32).init(testing.allocator);
+    defer tree.deinit();
 
-    testing.expectEqual(tree.count, 0);
+    testing.expectEqual(@as(usize, 0), tree.count);
+    testing.expectEqual(@as(usize, 0), tree.items.len);
 }
 
 test "BinaryTree.insert method" {
@@ -175,10 +126,10 @@ test "BinaryTree.insert method" {
     try tree.insert(7);
     try tree.insert(2);
 
-    testing.expectEqual(tree.count, 3);
-    testing.expectEqual(tree.root.?.data, 3);
-    testing.expectEqual(tree.root.?.right.?.data, 7);
-    testing.expectEqual(tree.root.?.left.?.data, 2);
+    testing.expectEqual(@as(usize, 3), tree.count);
+    testing.expectEqual(@as(i32, 3), tree.items[tree.root].?.data);
+    testing.expectEqual(@as(i32, 7), tree.items[tree.items[tree.root].?.right].?.data);
+    testing.expectEqual(@as(i32, 2), tree.items[tree.items[tree.root].?.left].?.data);
 }
 
 test "BinaryTree.map method" {
@@ -197,15 +148,17 @@ test "BinaryTree.map method" {
 
     tree.map(addOne);
 
-    testing.expectEqual(tree.count, 3);
-    testing.expectEqual(tree.root.?.data, 4);
-    testing.expectEqual(tree.root.?.right.?.data, 8);
-    testing.expectEqual(tree.root.?.left.?.data, 3);
+    testing.expectEqual(@as(usize, 3), tree.count);
+    testing.expectEqual(@as(i32, 4), tree.items[tree.root].?.data);
+    testing.expectEqual(@as(i32, 8), tree.items[tree.items[tree.root].?.right].?.data);
+    testing.expectEqual(@as(i32, 3), tree.items[tree.items[tree.root].?.left].?.data);
 }
 
 test "BinaryTree.contains method" {
     var tree = BinaryTree(i32).init(testing.allocator);
     defer tree.deinit();
+
+    testing.expect(!tree.contains(7));
 
     try tree.insert(3);
     try tree.insert(7);
@@ -216,21 +169,21 @@ test "BinaryTree.contains method" {
     testing.expect(!tree.contains(8));
 }
 
-test "BinaryTree.delete method" {
-    var tree = BinaryTree(i32).init(testing.allocator);
-    defer tree.deinit();
+// test "BinaryTree.delete method" {
+//     var tree = BinaryTree(i32).init(testing.allocator);
+//     defer tree.deinit();
 
-    try tree.insert(4);
-    try tree.insert(7);
-    try tree.insert(1);
-    try tree.insert(3);
-    try tree.insert(6);
+//     try tree.insert(4);
+//     try tree.insert(7);
+//     try tree.insert(1);
+//     try tree.insert(3);
+//     try tree.insert(6);
 
-    testing.expectEqual(tree.count, 5);
-    testing.expectEqual(tree.root.?.data, 4);
+//     testing.expectEqual(tree.count, 5);
+//     testing.expectEqual(tree.root.?.data, 4);
 
-    tree.delete(4);
+//     tree.delete(4);
 
-    testing.expectEqual(tree.count, 4);
-    testing.expectEqual(tree.root.?.data, 6);
-}
+//     testing.expectEqual(tree.count, 4);
+//     testing.expectEqual(tree.root.?.data, 6);
+// }
