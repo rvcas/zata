@@ -212,10 +212,8 @@ test "BinaryTree.delete" {
     try tree.insert(6);
 
     testing.expectEqual(@as(usize, 5), tree.count);
-    // testing.expectEqual(tree.root.?.data, 4);
 
     tree.delete(3);
 
     testing.expectEqual(@as(usize, 4), tree.count);
-    // testing.expectEqual(tree.root.?.data, 6);
 }
