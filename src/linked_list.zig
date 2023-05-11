@@ -6,7 +6,7 @@ pub fn LinkedList(comptime T: type) type {
         head: ?*Node,
         tail: ?*Node,
         len: usize,
-        allocator: *std.mem.Allocator,
+        allocator: std.mem.Allocator,
 
         const Self = @This();
 
@@ -24,7 +24,7 @@ pub fn LinkedList(comptime T: type) type {
             }
         };
 
-        pub fn init(allocator: *std.mem.Allocator) Self {
+        pub fn init(allocator: std.mem.Allocator) Self {
             return Self{
                 .head = null,
                 .tail = null,
@@ -39,7 +39,9 @@ pub fn LinkedList(comptime T: type) type {
             while (self.len > 0) {
                 var prev = self.tail.?.prev;
 
-                self.allocator.destroy(self.tail);
+                if (self.tail) |tail| {
+                    self.allocator.destroy(tail);
+                }
 
                 self.tail = prev;
 
@@ -84,7 +86,7 @@ pub fn LinkedList(comptime T: type) type {
             self.len += 1;
         }
 
-        pub fn map(self: *Self, func: fn (T) T) void {
+        pub fn map(self: *Self, comptime func: fn (T) T) void {
             var iter = self.head;
 
             while (iter) |node| {
@@ -138,15 +140,15 @@ test "LinkedList basic init" {
         .allocator = testing.allocator,
     };
 
-    testing.expect(list.len == 0);
+    try testing.expect(list.len == 0);
 }
 
 test "LinkedList.init method" {
     const list = LinkedList(i32).init(testing.allocator);
 
-    testing.expectEqual(list.len, 0);
-    testing.expect(list.head == null);
-    testing.expect(list.tail == null);
+    try testing.expectEqual(list.len, 0);
+    try testing.expect(list.head == null);
+    try testing.expect(list.tail == null);
 }
 
 test "LinkedList.insert method" {
@@ -155,17 +157,17 @@ test "LinkedList.insert method" {
 
     try list.insert(8);
 
-    testing.expectEqual(list.len, 1);
-    testing.expect(list.head != null);
-    testing.expect(list.tail != null);
-    testing.expectEqual(list.tail, list.head);
+    try testing.expectEqual(list.len, 1);
+    try testing.expect(list.head != null);
+    try testing.expect(list.tail != null);
+    try testing.expectEqual(list.tail, list.head);
 
     try list.insert(3);
 
-    testing.expectEqual(list.len, 2);
-    testing.expect(list.head != list.tail);
-    testing.expectEqual(list.head.?.data, 3);
-    testing.expectEqual(list.tail.?.data, 8);
+    try testing.expectEqual(list.len, 2);
+    try testing.expect(list.head != list.tail);
+    try testing.expectEqual(list.head.?.data, 3);
+    try testing.expectEqual(list.tail.?.data, 8);
 }
 
 test "LinkedList.append method" {
@@ -174,17 +176,17 @@ test "LinkedList.append method" {
 
     try list.append(4);
 
-    testing.expectEqual(list.len, 1);
-    testing.expect(list.head != null);
-    testing.expect(list.tail != null);
-    testing.expectEqual(list.tail, list.head);
+    try testing.expectEqual(list.len, 1);
+    try testing.expect(list.head != null);
+    try testing.expect(list.tail != null);
+    try testing.expectEqual(list.tail, list.head);
 
     try list.append(7);
 
-    testing.expectEqual(list.len, 2);
-    testing.expect(list.head != list.tail);
-    testing.expectEqual(list.head.?.data, 4);
-    testing.expectEqual(list.tail.?.data, 7);
+    try testing.expectEqual(list.len, 2);
+    try testing.expect(list.head != list.tail);
+    try testing.expectEqual(list.head.?.data, 4);
+    try testing.expectEqual(list.tail.?.data, 7);
 }
 
 test "LinkedList.map method" {
@@ -202,9 +204,9 @@ test "LinkedList.map method" {
 
     list.map(multThree);
 
-    testing.expectEqual(list.len, 2);
-    testing.expectEqual(list.head.?.data, 9);
-    testing.expectEqual(list.tail.?.data, 6);
+    try testing.expectEqual(list.len, 2);
+    try testing.expectEqual(list.head.?.data, 9);
+    try testing.expectEqual(list.tail.?.data, 6);
 }
 
 test "LinkedList.contains method" {
@@ -213,8 +215,8 @@ test "LinkedList.contains method" {
 
     try list.insert(11);
 
-    testing.expect(list.contains(11));
-    testing.expect(!list.contains(7));
+    try testing.expect(list.contains(11));
+    try testing.expect(!list.contains(7));
 }
 
 test "LinkedList.deinit method" {
@@ -224,12 +226,12 @@ test "LinkedList.deinit method" {
     try list.append(4);
     try list.append(100);
 
-    testing.expectEqual(list.len, 2);
+    try testing.expectEqual(list.len, 2);
 
     list.deinit();
 
-    testing.expectEqual(list.len, 0);
-    testing.expectEqual(list.head, list.tail);
+    try testing.expectEqual(list.len, 0);
+    try testing.expectEqual(list.head, list.tail);
 }
 
 test "LinkedList.delete method" {
@@ -240,8 +242,8 @@ test "LinkedList.delete method" {
     try list.insert(8);
     try list.append(9);
 
-    testing.expectEqual(list.delete(), 9);
-    testing.expectEqual(list.delete(), 5);
-    testing.expectEqual(list.delete(), 8);
-    testing.expectEqual(list.len, 0);
+    try testing.expectEqual(list.delete(), 9);
+    try testing.expectEqual(list.delete(), 5);
+    try testing.expectEqual(list.delete(), 8);
+    try testing.expectEqual(list.len, 0);
 }

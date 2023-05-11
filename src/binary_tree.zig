@@ -7,7 +7,7 @@ pub fn BinaryTree(comptime T: type) type {
         items: []?Node,
         count: usize = 0,
         capacity: usize = 0,
-        allocator: *std.mem.Allocator,
+        allocator: std.mem.Allocator,
 
         const Self = @This();
 
@@ -37,7 +37,7 @@ pub fn BinaryTree(comptime T: type) type {
             }
         };
 
-        pub fn init(allocator: *std.mem.Allocator) Self {
+        pub fn init(allocator: std.mem.Allocator) Self {
             return Self{
                 .items = &[_]?Node{},
                 .allocator = allocator,
@@ -70,7 +70,7 @@ pub fn BinaryTree(comptime T: type) type {
             }
         }
 
-        pub fn map(self: *Self, func: fn (T) T) void {
+        pub fn map(self: *Self, comptime func: fn (T) T) void {
             for (self.items) |*item| {
                 if (item.*) |node| {
                     item.*.?.data = func(node.data);
@@ -82,7 +82,6 @@ pub fn BinaryTree(comptime T: type) type {
         pub fn delete(self: *Self, data: T) void {
             switch (self.search(data)) {
                 .found => |result| {
-                    var temp = self.items[result.location];
                     self.items[result.location] = null;
                     self.count -= 1;
                 },
@@ -132,8 +131,8 @@ test "BinaryTree.init" {
     var tree = BinaryTree(i32).init(testing.allocator);
     defer tree.deinit();
 
-    testing.expectEqual(@as(usize, 0), tree.count);
-    testing.expectEqual(@as(usize, 0), tree.items.len);
+    try testing.expectEqual(@as(usize, 0), tree.count);
+    try testing.expectEqual(@as(usize, 0), tree.items.len);
 }
 
 test "BinaryTree.insert" {
@@ -144,10 +143,10 @@ test "BinaryTree.insert" {
     try tree.insert(7);
     try tree.insert(2);
 
-    testing.expectEqual(@as(usize, 3), tree.count);
-    testing.expectEqual(@as(i32, 3), tree.items[tree.root].?.data);
-    testing.expectEqual(@as(i32, 7), tree.items[tree.items[tree.root].?.right].?.data);
-    testing.expectEqual(@as(i32, 2), tree.items[tree.items[tree.root].?.left].?.data);
+    try testing.expectEqual(@as(usize, 3), tree.count);
+    try testing.expectEqual(@as(i32, 3), tree.items[tree.root].?.data);
+    try testing.expectEqual(@as(i32, 7), tree.items[tree.items[tree.root].?.right].?.data);
+    try testing.expectEqual(@as(i32, 2), tree.items[tree.items[tree.root].?.left].?.data);
 }
 
 test "BinaryTree.map" {
@@ -166,10 +165,10 @@ test "BinaryTree.map" {
 
     tree.map(addOne);
 
-    testing.expectEqual(@as(usize, 3), tree.count);
-    testing.expectEqual(@as(i32, 4), tree.items[tree.root].?.data);
-    testing.expectEqual(@as(i32, 8), tree.items[tree.items[tree.root].?.right].?.data);
-    testing.expectEqual(@as(i32, 3), tree.items[tree.items[tree.root].?.left].?.data);
+    try testing.expectEqual(@as(usize, 3), tree.count);
+    try testing.expectEqual(@as(i32, 4), tree.items[tree.root].?.data);
+    try testing.expectEqual(@as(i32, 8), tree.items[tree.items[tree.root].?.right].?.data);
+    try testing.expectEqual(@as(i32, 3), tree.items[tree.items[tree.root].?.left].?.data);
 }
 
 test "BinaryTree.search" {
@@ -178,27 +177,27 @@ test "BinaryTree.search" {
 
     const SearchResult = BinaryTree(i32).SearchResult;
 
-    testing.expectEqual(SearchResult.not_found, tree.search(7));
+    try testing.expectEqual(SearchResult.not_found, tree.search(7));
 
     try tree.insert(5);
     try tree.insert(7);
     try tree.insert(4);
 
-    testing.expectEqual(SearchResult{
+    try testing.expectEqual(SearchResult{
         .found = .{
             .data = 7,
             .location = 3,
         },
     }, tree.search(7));
 
-    testing.expectEqual(SearchResult{
+    try testing.expectEqual(SearchResult{
         .found = .{
             .data = 4,
             .location = 2,
         },
     }, tree.search(4));
 
-    testing.expectEqual(SearchResult.not_found, tree.search(8));
+    try testing.expectEqual(SearchResult.not_found, tree.search(8));
 }
 
 test "BinaryTree.delete" {
@@ -211,9 +210,9 @@ test "BinaryTree.delete" {
     try tree.insert(3);
     try tree.insert(6);
 
-    testing.expectEqual(@as(usize, 5), tree.count);
+    try testing.expectEqual(@as(usize, 5), tree.count);
 
     tree.delete(3);
 
-    testing.expectEqual(@as(usize, 4), tree.count);
+    try testing.expectEqual(@as(usize, 4), tree.count);
 }
