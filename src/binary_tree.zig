@@ -4,10 +4,8 @@ const testing = std.testing;
 pub fn BinaryTree(comptime T: type) type {
     return struct {
         root: usize = 1,
-        items: []?Node,
-        count: usize = 0,
-        capacity: usize = 0,
-        allocator: std.mem.Allocator,
+        items: NodeList,
+        count: usize,
 
         const Self = @This();
 
@@ -20,6 +18,8 @@ pub fn BinaryTree(comptime T: type) type {
             location: usize,
             data: T,
         };
+
+        const NodeList = std.ArrayList(?Node);
 
         const Node = struct {
             left: usize,
@@ -39,21 +39,21 @@ pub fn BinaryTree(comptime T: type) type {
 
         pub fn init(allocator: std.mem.Allocator) Self {
             return Self{
-                .items = &[_]?Node{},
-                .allocator = allocator,
+                .items = NodeList.init(allocator),
+                .count = 0,
             };
         }
 
         pub fn deinit(self: *Self) void {
-            self.allocator.free(self.items.ptr[0..self.capacity]);
+            self.items.deinit();
         }
 
         pub fn insert(self: *Self, data: T) !void {
-            var iter: usize = 1;
+            var iter: usize = 0;
             while (true) {
-                try self.ensureCapacity(iter);
+                try self.items.ensureTotalCapacity(iter);
 
-                if (self.items[iter]) |node| {
+                if (self.items.items[iter]) |node| {
                     if (data == node.data) {
                         break;
                     } else if (data > node.data) {
@@ -62,7 +62,7 @@ pub fn BinaryTree(comptime T: type) type {
                         iter = node.left;
                     }
                 } else {
-                    self.items[iter] = Node.init(data, iter);
+                    try self.items.insert(iter, Node.init(data, iter));
                     self.count += 1;
 
                     break;
@@ -71,7 +71,7 @@ pub fn BinaryTree(comptime T: type) type {
         }
 
         pub fn map(self: *Self, comptime func: fn (T) T) void {
-            for (self.items) |*item| {
+            for (self.items.items) |*item| {
                 if (item.*) |node| {
                     item.*.?.data = func(node.data);
                 }
@@ -79,10 +79,10 @@ pub fn BinaryTree(comptime T: type) type {
         }
 
         // TODO: fix the links might need to shift some nodes around
-        pub fn delete(self: *Self, data: T) void {
+        pub fn delete(self: *Self, data: T) !void {
             switch (self.search(data)) {
                 .found => |result| {
-                    self.items[result.location] = null;
+                    try self.items.insert(result.location, null);
                     self.count -= 1;
                 },
                 .not_found => {},
@@ -92,11 +92,11 @@ pub fn BinaryTree(comptime T: type) type {
         pub fn search(self: *Self, data: T) SearchResult {
             var iter: usize = 1;
             while (true) {
-                if (iter > self.capacity) {
+                if (iter > self.items.capacity) {
                     return .not_found;
                 }
 
-                if (self.items[iter]) |node| {
+                if (self.items.items[iter]) |node| {
                     if (data == node.data) {
                         return .{ .found = .{ .location = node.location, .data = node.data } };
                     } else if (data > node.data) {
@@ -109,21 +109,6 @@ pub fn BinaryTree(comptime T: type) type {
                 }
             }
         }
-
-        fn ensureCapacity(self: *Self, new_capacity: usize) !void {
-            var better_capacity = self.capacity;
-            if (better_capacity >= new_capacity) return;
-
-            while (true) {
-                better_capacity += better_capacity / 2 + 8;
-                if (better_capacity >= new_capacity) break;
-            }
-
-            const new_memory = try self.allocator.realloc(self.items.ptr[0..self.capacity], better_capacity);
-            self.items.ptr = new_memory.ptr;
-            self.capacity = new_memory.len;
-            self.items.len = self.capacity;
-        }
     };
 }
 
@@ -132,7 +117,6 @@ test "BinaryTree.init" {
     defer tree.deinit();
 
     try testing.expectEqual(@as(usize, 0), tree.count);
-    try testing.expectEqual(@as(usize, 0), tree.items.len);
 }
 
 test "BinaryTree.insert" {
@@ -144,9 +128,9 @@ test "BinaryTree.insert" {
     try tree.insert(2);
 
     try testing.expectEqual(@as(usize, 3), tree.count);
-    try testing.expectEqual(@as(i32, 3), tree.items[tree.root].?.data);
-    try testing.expectEqual(@as(i32, 7), tree.items[tree.items[tree.root].?.right].?.data);
-    try testing.expectEqual(@as(i32, 2), tree.items[tree.items[tree.root].?.left].?.data);
+    try testing.expectEqual(@as(i32, 3), tree.items.items[tree.root].?.data);
+    try testing.expectEqual(@as(i32, 7), tree.items.items[tree.items.items[tree.root].?.right].?.data);
+    try testing.expectEqual(@as(i32, 2), tree.items.items[tree.items.items[tree.root].?.left].?.data);
 }
 
 test "BinaryTree.map" {
@@ -166,9 +150,9 @@ test "BinaryTree.map" {
     tree.map(addOne);
 
     try testing.expectEqual(@as(usize, 3), tree.count);
-    try testing.expectEqual(@as(i32, 4), tree.items[tree.root].?.data);
-    try testing.expectEqual(@as(i32, 8), tree.items[tree.items[tree.root].?.right].?.data);
-    try testing.expectEqual(@as(i32, 3), tree.items[tree.items[tree.root].?.left].?.data);
+    try testing.expectEqual(@as(i32, 4), tree.items.items[tree.root].?.data);
+    try testing.expectEqual(@as(i32, 8), tree.items.items[tree.items.items[tree.root].?.right].?.data);
+    try testing.expectEqual(@as(i32, 3), tree.items.items[tree.items.items[tree.root].?.left].?.data);
 }
 
 test "BinaryTree.search" {
@@ -212,7 +196,7 @@ test "BinaryTree.delete" {
 
     try testing.expectEqual(@as(usize, 5), tree.count);
 
-    tree.delete(3);
+    try tree.delete(3);
 
     try testing.expectEqual(@as(usize, 4), tree.count);
 }
